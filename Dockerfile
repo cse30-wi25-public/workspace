@@ -35,7 +35,8 @@ RUN apt-get update && apt-get upgrade -y &&\
         bzip2=1.0.8-5build1 \
         build-essential=12.9ubuntu3 \
         file=1:5.41-3ubuntu0.1 \
-        net-tools=1.60+git20181103.0eebece-1ubuntu5 &&\
+        net-tools=1.60+git20181103.0eebece-1ubuntu5 \
+        libssl-dev=3.0.2-0ubuntu1.18 &&\
     apt-get install -y --no-install-recommends \
         gcc-arm-linux-gnueabihf=4:11.2.0-1ubuntu1 \
         g++-arm-linux-gnueabihf=4:11.2.0-1ubuntu1 \
@@ -88,6 +89,14 @@ RUN chmod +x /usr/bin/arm /usr/bin/gdb &&\
     mv /usr/bin/gcc /usr/bin/gcc-x86 &&\
     mv /usr/bin/arm-linux-gnueabihf-gcc /usr/bin/gcc
 
+COPY hook_execve.c /root/
+WORKDIR /root
+
+RUN /bin/bash -o pipefail -c 'QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
+    sed -i "s|PLACEHOLDER_HASH|$QEMU_HASH|g" /root/hook_execve.c' &&\
+    /usr/bin/gcc-x86 -shared -fPIC -o hook_execve.so hook_execve.c -ldl -lssl -lcrypto &&\
+    mv /root/hook_execve.so /usr/lib/hook_execve.so
+
 COPY src /xterm
 WORKDIR /xterm
 
@@ -103,5 +112,7 @@ RUN /bin/bash -o pipefail -c "curl -fsSL https://deb.nodesource.com/setup_22.x |
 EXPOSE 8080
 USER 1001
 
+ENV LD_PRELOAD /usr/lib/hook_execve.so
 ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
+# CMD ["/bin/bash"]
 
