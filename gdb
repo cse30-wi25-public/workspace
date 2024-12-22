@@ -10,7 +10,7 @@ GDB_COMMANDS="${@:2}"
 
 QEMU_PORT=$(comm -23 <(seq 10000 20000 | sort) <(netstat -tln | awk '{print $4}' | grep -oE '[0-9]+$' | sort | uniq) | shuf -n 1)
 
-qemu-arm-static -g $QEMU_PORT "$BINARY" &
+/usr/bin/qemu-arm-static -g $QEMU_PORT "$BINARY" &
 
 while ! netstat -tln | grep -q ":$QEMU_PORT"; do
     sleep 0.1
