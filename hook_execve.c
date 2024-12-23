@@ -19,13 +19,10 @@
 
 typedef int (*real_execve_t)(const char *filename, char *const argv[], char *const envp[]);
 
-void build_new_argv(const size_t argc, char *const argv[], char **new_argv) {
+void build_new_argv(const char *filename, const size_t argc, char *const argv[], char **new_argv) {
     new_argv[0] = QEMU_ARM_STATIC_PATH;
-    if (new_argv[0] == NULL) {
-        perror("argv strdup");
-        exit(1);
-    }
-    for (size_t i = 0; i < argc; ++i) new_argv[i + 1] = argv[i];
+    new_argv[1] = (char*)filename;
+    for (size_t i = 1; i < argc; ++i) new_argv[i + 1] = argv[i];
     new_argv[argc + 1] = NULL;
 }
 
@@ -129,7 +126,7 @@ int execve(const char *filename, char *const argv[], char *const envp[]) {
         while (argv[argc] != NULL) ++argc;
         while (envp[envc] != NULL) ++envc;
         char *new_argv[argc + 2], *new_envp[envc + 1];
-        build_new_argv(argc, argv, new_argv);
+        build_new_argv(filename, argc, argv, new_argv);
         build_new_envp(envc, envp, new_envp);
         return real_execve(QEMU_ARM_STATIC_PATH, new_argv, new_envp);
     }

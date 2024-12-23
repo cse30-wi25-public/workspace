@@ -41,7 +41,6 @@ RUN apt-get update && apt-get upgrade -y &&\
         gcc-arm-linux-gnueabihf=4:11.2.0-1ubuntu1 \
         g++-arm-linux-gnueabihf=4:11.2.0-1ubuntu1 \
         binutils-arm-linux-gnueabi=2.38-4ubuntu2.6 \
-        # qemu-user=1:6.2+dfsg-2ubuntu6.24 \
         qemu-user-static=1:6.2+dfsg-2ubuntu6.24 \
         libc6-dbg-armhf-cross=2.35-0ubuntu1cross3 &&\
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -69,24 +68,19 @@ RUN rm -rf valgrind-3.22.0 valgrind-3.22.0.tar.bz2 &&\
     mv /usr/local/libexec/valgrind/memcheck-arm-linux /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper &&\
     echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux &&\
     echo 'exec qemu-arm-static /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper "$@"' >> /usr/local/libexec/valgrind/memcheck-arm-linux &&\
-    chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux &&\
-    mv /usr/local/bin/valgrind /usr/local/bin/valgrind-arm &&\
-    echo '#!/bin/bash' > /usr/local/bin/valgrind &&\
-    echo 'exec qemu-arm-static /usr/local/bin/valgrind-arm "$@"' >> /usr/local/bin/valgrind &&\
-    chmod +x /usr/local/bin/valgrind
+    chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
         gdb-multiarch=12.1-0ubuntu1~22.04.2 &&\
     mv /usr/bin/gdb /usr/bin/gdb-x86 &&\
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY arm /usr/bin/arm
 COPY gdb /usr/bin/gdb
 
-RUN chmod +x /usr/bin/arm /usr/bin/gdb &&\
+RUN chmod +x /usr/bin/gdb &&\
     mv /usr/bin/objdump /usr/bin/objdump-x86 &&\
     mv /usr/bin/arm-linux-gnueabihf-objdump /usr/bin/objdump &&\
-    mv /usr/bin/gcc /usr/bin/gcc-x86 &&\
+    mv /usr/bin/gcc /usr/bin/x86-gcc &&\
     mv /usr/bin/arm-linux-gnueabihf-gcc /usr/bin/gcc
 
 COPY hook_execve.c /root/
@@ -94,7 +88,7 @@ WORKDIR /root
 
 RUN /bin/bash -o pipefail -c 'QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
     sed -i "s|PLACEHOLDER_HASH|$QEMU_HASH|g" /root/hook_execve.c' &&\
-    /usr/bin/gcc-x86 -shared -fPIC -o hook_execve.so hook_execve.c -ldl -lssl -lcrypto &&\
+    /usr/bin/x86-gcc -shared -fPIC -o hook_execve.so hook_execve.c -ldl -lssl -lcrypto &&\
     mv /root/hook_execve.so /usr/lib/hook_execve.so
 
 COPY src /xterm
@@ -114,5 +108,4 @@ USER 1001
 
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
-# CMD ["/bin/bash"]
 
