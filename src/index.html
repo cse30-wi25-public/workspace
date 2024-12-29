@@ -40,10 +40,22 @@
         window.onresize();
         setInterval(() => {
           socket.send(JSON.stringify({ event: 'heartbeat' }));
-        }, 60 * 1000);
+        }, 10 * 1000);
 
         socket.onmessage = (msg) => {
-          term.write(msg.data);
+          let dataObj;
+          try {
+            dataObj = JSON.parse(msg.data);
+          } catch (e) {
+            term.write(msg.data);
+            return;
+          }
+          if (dataObj.event == "heartbeat-pong") {
+            console.log('[Client] heartbeat-pong');
+          }
+          else {
+            term.write(msg.data);
+          }
         };
       };
     </script>
