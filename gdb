@@ -16,10 +16,8 @@ while ! netstat -tln | grep -q ":$QEMU_PORT"; do
     sleep 0.1
 done
 
-gdb-multiarch \
+/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gdb \
     --ex="file $BINARY" \
-    --ex="set arch armv7" \
-    --ex="set sysroot /usr/arm-linux-gnueabihf/" \
     --ex="target remote localhost:$QEMU_PORT" \
     --ex="break main" \
     --ex="continue" \
