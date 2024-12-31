@@ -67,9 +67,9 @@ RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
 # PL user
-RUN useradd -m student &&\
-    usermod -aG sudo student &&\
-    echo "student ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/student &&\
+RUN useradd -m -s /bin/bash student && \
+    usermod -aG sudo student && \
+    echo "student ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/student && \
     chmod 0440 /etc/sudoers.d/student
 RUN OLD_UID="$(id -u student)" && \
     OLD_GID="$(id -g student)" && \
@@ -93,8 +93,8 @@ RUN /bin/bash -o pipefail -c "curl -fsSL https://deb.nodesource.com/setup_22.x |
     yarn cache clean &&\
     apt-get clean && rm -rf /var/lib/apt/lists/*
 EXPOSE 8080
-USER 1001
 
 ENV PATH="/usr/armbin:$PATH"
+USER 1001
 ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
 
