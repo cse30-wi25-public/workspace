@@ -6,7 +6,8 @@ WORKDIR /root
 
 # x86 tools
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-        sudo ca-certificates vim curl wget bzip2 file net-tools build-essential less libssl-dev \
+        sudo ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
+        vim emacs-nox tmux neovim clangd ccls bear ssh git less file \
         qemu-user-static
 
 # toolchain & tools symbolic link
@@ -16,8 +17,9 @@ RUN curl -L https://static.jyh.sb/source/arm-gnu-toolchain-14.2.rel1-x86_64-arm-
     rm /root/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
 ENV QEMU_LD_PREFIX=/usr/arm-gnu-toolchain/arm-none-linux-gnueabihf/libc
 
-# wrapper
-RUN mkdir -p /usr/armbin && \
+# link & wrapper
+RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
+    mkdir -p /usr/armbin && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-addr2line /usr/armbin/addr2line && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-nm /usr/armbin/nm && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-readelf /usr/armbin/readelf && \
