@@ -7,17 +7,22 @@ WORKDIR /
 # x86 tools
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
         sudo ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
-        vim emacs-nox tmux neovim clangd ccls bear ssh git less file \
+        vim neovim emacs-nox tmux clangd ccls bear ssh git less file \
         qemu-user-static
 
-# toolchain & tools symbolic link
+# set 'vim' command to use the native vim
+# set emacs native compile to use x86 gcc
+RUN update-alternatives --set vim /usr/bin/vim.basic && \
+    echo "(setq native-comp-driver-options '(\"-B/usr/bin/\" \"-fPIC\" \"-O2\"))" >> /etc/emacs/site-start.d/00-native-compile.el
+
+# arm gnu toolchain
 RUN curl -L https://static.jyh.sb/source/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -O && \
     tar -xvf /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -C / && \
     mv /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf /usr/arm-gnu-toolchain && \
     rm /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
 ENV QEMU_LD_PREFIX=/usr/arm-gnu-toolchain/arm-none-linux-gnueabihf/libc
 
-# link & wrapper
+# symbolic link & gdb wrapper
 RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     mkdir -p /usr/armbin && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-addr2line /usr/armbin/addr2line && \
@@ -40,7 +45,7 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
 COPY gdb /usr/armbin/gdb
 RUN chmod +x /usr/armbin/gdb
 
-# valgrind
+# cross compile valgrind
 RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \
     tar -jxf valgrind-3.24.0.tar.bz2
 WORKDIR /valgrind-3.24.0
