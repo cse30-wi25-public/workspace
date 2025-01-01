@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-WORKDIR /root
+WORKDIR /
 
 # x86 tools
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
@@ -12,9 +12,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 
 # toolchain & tools symbolic link
 RUN curl -L https://static.jyh.sb/source/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -O && \
-    tar -xvf /root/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -C /root/ && \
-    mv /root/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf /usr/arm-gnu-toolchain && \
-    rm /root/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
+    tar -xvf /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -C / && \
+    mv /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf /usr/arm-gnu-toolchain && \
+    rm /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
 ENV QEMU_LD_PREFIX=/usr/arm-gnu-toolchain/arm-none-linux-gnueabihf/libc
 
 # link & wrapper
@@ -43,7 +43,7 @@ RUN chmod +x /usr/armbin/gdb
 # valgrind
 RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \
     tar -jxf valgrind-3.24.0.tar.bz2
-WORKDIR /root/valgrind-3.24.0
+WORKDIR /valgrind-3.24.0
 RUN sed -i 's/armv7/arm/g' ./configure && \
     ./configure --host=arm-none-linux-gnueabihf \
                 --prefix=/usr/local \
@@ -52,7 +52,7 @@ RUN sed -i 's/armv7/arm/g' ./configure && \
                 CPP=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp && \
     make CFLAGS+="-fPIC" && \
     make install
-WORKDIR /root/
+WORKDIR /
 RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
     mv /usr/local/libexec/valgrind/memcheck-arm-linux /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper && \
     echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux && \
@@ -61,11 +61,12 @@ RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
 ENV VALGRIND_OPTS="--vgdb=no"
 
 # exec hook
-COPY hook_execve.c /root/
+COPY hook_execve.c /
 RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
-    sed -i "s|PLACEHOLDER_HASH|$QEMU_HASH|g" /root/hook_execve.c && \
+    sed -i "s|PLACEHOLDER_HASH|$QEMU_HASH|g" /hook_execve.c && \
     /usr/bin/gcc -shared -fPIC -o hook_execve.so hook_execve.c -ldl -lssl -lcrypto && \
-    mv /root/hook_execve.so /usr/lib/hook_execve.so
+    mv /hook_execve.so /usr/lib/hook_execve.so && \
+    rm hook_execve.c
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
 # PL user
