@@ -75,10 +75,7 @@ RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
 # PL user
-RUN useradd -m -s /bin/bash student && \
-    usermod -aG sudo student && \
-    echo "student ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/student && \
-    chmod 0440 /etc/sudoers.d/student
+RUN useradd -m -s /bin/bash student
 RUN OLD_UID="$(id -u student)" && \
     OLD_GID="$(id -g student)" && \
     NEW_UID=1001 && \
@@ -104,5 +101,6 @@ EXPOSE 8080
 
 ENV PATH="/usr/armbin:$PATH"
 USER 1001
-ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
+# ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
+CMD ["/bin/bash"]
 
