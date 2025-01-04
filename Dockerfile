@@ -6,8 +6,11 @@ WORKDIR /
 
 # x86 tools
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-        sudo ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
-        vim neovim emacs-nox tmux clangd ccls bear ssh git less file \
+        sudo ca-certificates curl wget bzip2 net-tools build-essential libssl-dev software-properties-common && \
+    add-apt-repository ppa:maveonair/helix-editor && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        vim neovim emacs-nox helix nano tmux clangd ccls bear ssh git less file \
         qemu-user-static
 
 # set 'vim' command to use the native vim
