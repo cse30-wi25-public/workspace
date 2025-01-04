@@ -101,6 +101,5 @@ EXPOSE 8080
 
 ENV PATH="/usr/armbin:$PATH"
 USER 1001
-# ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
-CMD ["/bin/bash"]
+ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
 
