@@ -13,6 +13,11 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
         vim neovim emacs-nox helix nano tmux clangd ccls bear ssh git less file \
         qemu-user-static
 
+# timezone
+RUN ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime \
+    && echo "America/Los_Angeles" > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata
+
 # set 'vim' command to use the native vim
 # set emacs native compile to use x86 gcc
 RUN update-alternatives --set vim /usr/bin/vim.basic && \
