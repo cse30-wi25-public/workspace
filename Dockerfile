@@ -6,7 +6,7 @@ WORKDIR /
 
 # x86 tools
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-        sudo ca-certificates curl wget bzip2 net-tools build-essential libssl-dev software-properties-common && \
+        sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev software-properties-common && \
     add-apt-repository ppa:maveonair/helix-editor && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -82,18 +82,6 @@ RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
     rm hook_execve.c
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
-# PL user
-RUN useradd -m -s /bin/bash student
-RUN OLD_UID="$(id -u student)" && \
-    OLD_GID="$(id -g student)" && \
-    NEW_UID=1001 && \
-    NEW_GID=1001 && \
-    groupmod -g "$NEW_GID" student && \
-    usermod -u "$NEW_UID" -g "$NEW_GID" student && \
-    find /home -user "$OLD_UID" -execdir chown -h "$NEW_UID" {} + && \
-    find /home -group "$OLD_GID" -execdir chgrp -h "$NEW_GID" {} +
-ENV PL_USER student
-
 # xterm js
 COPY src /xterm
 WORKDIR /xterm
@@ -107,7 +95,25 @@ RUN /bin/bash -o pipefail -c "curl -fsSL https://deb.nodesource.com/setup_22.x |
     apt-get clean && rm -rf /var/lib/apt/lists/*
 EXPOSE 8080
 
-ENV PATH="/usr/armbin:$PATH"
-USER 1001
-ENTRYPOINT ["node", "server.js", "-w", "/home/student"]
+# PL user
+RUN useradd -m -s /bin/bash student
+RUN OLD_UID="$(id -u student)" && \
+    OLD_GID="$(id -g student)" && \
+    NEW_UID=1001 && \
+    NEW_GID=1001 && \
+    groupmod -g "$NEW_GID" student && \
+    usermod -u "$NEW_UID" -g "$NEW_GID" student && \
+    find /home -user "$OLD_UID" -execdir chown -h "$NEW_UID" {} + && \
+    find /home -group "$OLD_GID" -execdir chgrp -h "$NEW_GID" {} +
+ENV PL_USER student
 
+# gosu helper
+COPY --chmod=0755 --chown=root:root gosu-entry /usr/bin/
+USER root
+RUN mkdir -p /run /var/run && \
+    touch /run/fixuid.ran /var/run/fixuid.ran
+
+ENV PATH="/usr/armbin:$PATH"
+USER student
+# ENTRYPOINT ["/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
+CMD ["/bin/bash"]

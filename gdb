@@ -7,7 +7,19 @@ while [[ "$1" =~ ^- && $# -gt 0 ]]; do
 done
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 [<GDB options>...] <binary> [<program args>...]"
+    usage="Usage: gdb [<GDB options>...] <binary> [<program args>...] [< <input-file>]]
+
+Description:
+    This script allows optional stdin redirection to the target program instead of GDB.
+
+Examples:
+    gdb ./prog arg1 arg2             # Run prog with arguments arg1 and arg2 under GDB.
+    gdb ./prog arg1 arg2 < input.txt # Redirect input.txt to prog's stdin.
+
+Notes:
+    - If '<' is used, input redirection applies to the program being debugged, not GDB itself."
+
+    echo "$usage"
     exit 1
 fi
 
