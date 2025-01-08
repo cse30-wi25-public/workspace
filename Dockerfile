@@ -115,5 +115,4 @@ RUN mkdir -p /run /var/run && \
 
 ENV PATH="/usr/armbin:$PATH"
 USER student
-# ENTRYPOINT ["/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
-CMD ["/bin/bash"]
+ENTRYPOINT ["/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
