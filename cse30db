@@ -1,0 +1,144 @@
+#!/bin/bash
+
+usage="Usage: cse30db [GDB options] <program> [program args]
+
+Accepted GDB options:
+    --help, -h
+    --symbols=<file>, -s <file>
+    --command=<file>, -x <file>
+    --eval-command=<cmd>, -ex <cmd>
+    --directory=<dir>, -d <dir>
+    --tui
+    --cd=<dir>
+
+Examples:
+    cse30db ./prog                       # Run the binary prog under GDB
+    cse30db ./prog arg1 arg2             # Run prog with arguments arg1 and arg2 under GDB.
+    cse30db ./prog arg1 arg2 < input.txt # Redirect input.txt to prog's stdin.
+
+Notes:
+    - Redirection applies to the program being debugged, not GDB.
+    - For more information, see the man page: man cse30db
+"
+
+PRE_GDB_ARGS=()
+POST_GDB_ARGS=()
+
+BINARY=""
+PROGRAM_ARGS=()
+
+print_usage_and_exit() {
+    echo "$usage"
+    exit 1
+}
+
+startswith() {
+    [[ "$1" == "$2"* ]]
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+
+        -h|--help)
+            print_usage_and_exit
+            ;;
+
+        -s|--symbols=*)
+            if [[ "$1" == "-s" ]]; then
+                shift
+                [[ -z "$1" ]] && print_usage_and_exit
+                PRE_GDB_ARGS+=("-s" "$1")
+            else
+                file="${1#*=}"
+                PRE_GDB_ARGS+=("--symbols=$file")
+            fi
+            ;;
+
+        -d|--directory=*)
+            if [[ "$1" == "-d" ]]; then
+                shift
+                [[ -z "$1" ]] && print_usage_and_exit
+                PRE_GDB_ARGS+=("-d" "$1")
+            else
+                dir="${1#*=}"
+                PRE_GDB_ARGS+=("--directory=$dir")
+            fi
+            ;;
+
+        --tui)
+            PRE_GDB_ARGS+=("--tui")
+            ;;
+
+        --cd=*)
+            dir="${1#*=}"
+            PRE_GDB_ARGS+=("--cd=$dir")
+            ;;
+
+        -x)
+            shift
+            [[ -z "$1" ]] && print_usage_and_exit
+            POST_GDB_ARGS+=("-x" "$1")
+            ;;
+        --command=*)
+            file="${1#*=}"
+            POST_GDB_ARGS+=("--command=$file")
+            ;;
+        -ex)
+            shift
+            [[ -z "$1" ]] && print_usage_and_exit
+            POST_GDB_ARGS+=("-ex" "$1")
+            ;;
+        --eval-command=*)
+            cmd="${1#*=}"
+            POST_GDB_ARGS+=("--eval-command=$cmd")
+            ;;
+
+        -*)
+            print_usage_and_exit
+            ;;
+        *)
+            if [[ -z "$BINARY" ]]; then
+                BINARY="$1"
+            else
+                PROGRAM_ARGS+=( "$1" )
+            fi
+            ;;
+    esac
+    shift
+done
+
+if [[ -z "$BINARY" ]]; then
+    print_usage_and_exit
+fi
+
+
+exec 3<&0
+
+QEMU_PORT=$(comm -23 <(seq 10000 20000 | sort) \
+    <(netstat -tln 2>/dev/null | awk '{print $4}' | grep -oE '[0-9]+$' | sort -u) \
+    | shuf -n 1)
+
+/usr/bin/qemu-arm-static -g "$QEMU_PORT" "$BINARY" "${PROGRAM_ARGS[@]}" <&3 &
+QEMU_PID=$!
+
+while ! netstat -tln 2>/dev/null | grep -q ":$QEMU_PORT"; do
+    sleep 0.1
+done
+
+if TTY_DEVICE=$(tty 2>/dev/null); then
+    GDB_TTY="$TTY_DEVICE"
+else
+    GDB_TTY="/dev/tty"
+fi
+
+/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gdb \
+    "${PRE_GDB_ARGS[@]}" \
+    --ex="file $BINARY" \
+    --ex="target remote localhost:$QEMU_PORT" \
+    --ex="break main" \
+    --ex="continue" \
+    "${POST_GDB_ARGS[@]}" \
+    < "$GDB_TTY" > "$GDB_TTY"
+
+kill "$QEMU_PID" 2>/dev/null
+

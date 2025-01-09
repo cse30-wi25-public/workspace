@@ -30,7 +30,7 @@ RUN curl -L https://static.jyh.sb/source/arm-gnu-toolchain-14.2.rel1-x86_64-arm-
     rm /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
 ENV QEMU_LD_PREFIX=/usr/arm-gnu-toolchain/arm-none-linux-gnueabihf/libc
 
-# symbolic link & gdb wrapper
+# symbolic link
 RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     mkdir -p /usr/armbin && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-addr2line /usr/armbin/addr2line && \
@@ -50,8 +50,14 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-objcopy /usr/armbin/objcopy && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-objdump /usr/armbin/objdump && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-size /usr/armbin/size
-COPY gdb /usr/armbin/gdb
-RUN chmod +x /usr/armbin/gdb
+
+# gdb wrapper & man page
+RUN apt-get install -y unminimize man-db && \
+    echo 'y' | unminimize && \
+    mkdir -p /usr/local/man/man1
+COPY gdb cse30db /usr/armbin/
+RUN chmod +x /usr/armbin/gdb /usr/armbin/cse30db
+COPY cse30db.1 /usr/local/man/man1/
 
 # cross compile valgrind
 RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \

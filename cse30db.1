@@ -1,0 +1,107 @@
+.TH CSE30DB 1 "2025-01-08" "cse30db" "GNU Development Tools"
+.SH "NAME"
+cse30db \- A script for debugging ARM programs with QEMU and GDB
+.SH "SYNOPSIS"
+.B cse30db
+[\fIGDB options\fR] <\fIprog\fR> [\fIprogram args\fR]
+.SH "DESCRIPTION"
+cse30db is a wrapper script for running ARM programs under GDB using QEMU. 
+It simplifies debugging by automating the setup process for remote debugging.
+
+.SH "EXAMPLES"
+The following examples demonstrate common use cases for \fBcse30db\fR:
+
+.TP
+.B cse30db ./prog
+Run the binary \fIprog\fR under GDB.
+
+.TP
+.B cse30db ./prog arg1 arg2
+Run the binary \fIprog\fR with arguments \fIarg1\fR and \fIarg2\fR under GDB.
+
+.TP
+.B cse30db ./prog arg1 arg2 < input.txt
+Run \fIprog\fR with arguments \fIarg1\fR and \fIarg2\fR while redirecting
+\fIinput.txt\fR to the program's stdin.
+
+.SH "NOTES"
+Input redirection applies to the program being debugged, not GDB itself.
+
+.SH "FREQUENTLY USED GDB COMMANDS"
+Here are some commonly used GDB commands:
+
+.TP
+.B break [\fIfile\fR:][\fIfunction\fR|\fIline\fR]
+Set a breakpoint at \fIfunction\fR or \fIline\fR (optionally in \fIfile\fR).
+
+.TP
+.B bt
+Display a backtrace of the program stack.
+
+.TP
+.B print \fIexpr\fR
+Display the value of an expression.
+
+.TP
+.B c
+Continue program execution after stopping.
+
+.TP
+.B next
+Execute the next program line, stepping over any function calls.
+
+.TP
+.B step
+Execute the next program line, stepping into function calls.
+
+.TP
+.B quit, exit
+Exit GDB.
+
+.SH "OPTIONS"
+The first argument without an option flag is treated as the executable file to debug. 
+.P
+The following options are recognized:
+
+.TP
+.B \-\-help, \-h
+Display a list of available options with brief explanations.
+
+.TP
+.B \-\-symbols=\fIfile\fR, \-s \fIfile\fR
+Read symbol table from \fIfile\fR.
+
+.TP
+.B \-\-command=\fIfile\fR, \-x \fIfile\fR
+Execute GDB commands from \fIfile\fR.
+
+.TP
+.B \-\-eval\-command=\fIcommand\fR, \-ex \fIcommand\fR
+Execute the given GDB \fIcommand\fR.
+
+.TP
+.B \-\-directory=\fIdirectory\fR, \-d \fIdirectory\fR
+Add \fIdirectory\fR to the search path for source files.
+
+.TP
+.B \-\-tui
+Open GDB in terminal user interface mode.
+
+.TP
+.B \-\-cd=\fIdirectory\fR
+Run GDB with \fIdirectory\fR as its working directory.
+
+.SH "COPYRIGHT"
+.IX Header "COPYRIGHT"
+Copyright (c) 1988\-2024 Free Software Foundation, Inc.
+.PP
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the \s-1GNU\s0 Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being \*(L"Free Software\*(R" and \*(L"Free Software Needs
+Free Documentation\*(R", with the Front-Cover Texts being \*(L"A \s-1GNU\s0 Manual,\*(R"
+and with the Back-Cover Texts as in (a) below.
+.PP
+(a) The \s-1FSF\s0's Back-Cover Text is: \*(L"You are free to copy and modify
+this \s-1GNU\s0 Manual.  Buying copies from \s-1GNU\s0 Press supports the \s-1FSF\s0 in
+developing \s-1GNU\s0 and promoting software freedom.\*(R"
