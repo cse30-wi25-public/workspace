@@ -5,7 +5,7 @@ cse30db \- A script for debugging ARM programs with QEMU and GDB
 .B cse30db
 [\fIGDB options\fR] <\fIprog\fR> [\fIprogram args\fR]
 .SH "DESCRIPTION"
-cse30db is a wrapper script for running ARM programs under GDB using QEMU. 
+cse30db is a wrapper script for running ARM programs under GDB client using QEMU. 
 It simplifies debugging by automating the setup process for remote debugging.
 
 .SH "EXAMPLES"
@@ -24,72 +24,181 @@ Run the binary \fIprog\fR with arguments \fIarg1\fR and \fIarg2\fR under GDB.
 Run \fIprog\fR with arguments \fIarg1\fR and \fIarg2\fR while redirecting
 \fIinput.txt\fR to the program's stdin.
 
+.TP
+.B cse30db --cd="../" --ex="next" ./prog arg1
+Run \fIprog\fR with arguments \fIarg1\fR in the parent directory and execute the GDB command "\fBnext\fR" after loading the inferior.
+
 .SH "NOTES"
 Input redirection applies to the program being debugged, not GDB itself.
+.PP
+The command "\fBrun\fR" is unavailable in gdb interactive command line. The program will automatically run and stop at breakpoint \fImain\fR.
 
 .SH "FREQUENTLY USED GDB COMMANDS"
 Here are some commonly used GDB commands:
 
-.TP
-.B break [\fIfile\fR:][\fIfunction\fR|\fIline\fR]
-Set a breakpoint at \fIfunction\fR or \fIline\fR (optionally in \fIfile\fR).
-
-.TP
-.B bt
-Display a backtrace of the program stack.
-
-.TP
-.B print \fIexpr\fR
+.IP "\fBbreak [\fR\fIfile\fR\fB:][\fR\fIfunction\fR\fB|\fR\fIline\fR\fB]\fR" 4
+.IX Item "break [file:][function|line]"
+Set a breakpoint at \fIfunction\fR or \fIline\fR (in \fIfile\fR).
+.IP "\fBbt\fR" 4
+.IX Item "bt"
+Backtrace: display the program stack.
+.IP "\fBprint\fR \fIexpr\fR" 4
+.IX Item "print expr"
 Display the value of an expression.
+.IP "\fBc\fR" 4
+.IX Item "c"
+Continue running your program (after stopping, e.g. at a breakpoint).
+.IP "\fBnext\fR" 4
+.IX Item "next"
+Execute next program line (after stopping); step \fIover\fR any
+function calls in the line.
+.IP "\fBedit [\fR\fIfile\fR\fB:]\fR\fIfunction\fR" 4
+.IX Item "edit [file:]function"
+look at the program line where it is presently stopped.
+.IP "\fBlist [\fR\fIfile\fR\fB:]\fR\fIfunction\fR" 4
+.IX Item "list [file:]function"
+type the text of the program in the vicinity of where it is presently stopped.
+.IP "\fBstep\fR" 4
+.IX Item "step"
+Execute next program line (after stopping); step \fIinto\fR any
+function calls in the line.
+.IP "\fBhelp [\fR\fIname\fR\fB]\fR" 4
+.IX Item "help [name]"
+Show information about \s-1GDB\s0 command \fIname\fR, or general information
+about using \s-1GDB.\s0
+.IP "\fBquit\fR" 4
+.IX Item "quit"
+.PD 0
+.IP "\fBexit\fR" 4
+.IX Item "exit"
+.PD
+Exit from \s-1GDB.\s0
+.PP
 
-.TP
-.B c
-Continue program execution after stopping.
-
-.TP
-.B next
-Execute the next program line, stepping over any function calls.
-
-.TP
-.B step
-Execute the next program line, stepping into function calls.
-
-.TP
-.B quit, exit
-Exit GDB.
-
-.SH "OPTIONS"
+.SH "GDB OPTIONS"
 The first argument without an option flag is treated as the executable file to debug. 
+
+.PP
+The abbreviated forms are shown here with \fB\-\fR and long forms are shown
+with \fB\-\-\fR to reflect how they are shown in \fB\-\-help\fR. However,
+\&\s-1GDB\s0 recognizes all of the following conventions for most options:
+.ie n .IP """\-\-option=\fIvalue\fP""" 4
+.el .IP "\f(CW\-\-option=\f(CIvalue\f(CW\fR" 4
+.IX Item "--option=value"
+.PD 0
+.ie n .IP """\-\-option \fIvalue\fP""" 4
+.el .IP "\f(CW\-\-option \f(CIvalue\f(CW\fR" 4
+.IX Item "--option value"
+.ie n .IP """\-option=\fIvalue\fP""" 4
+.el .IP "\f(CW\-option=\f(CIvalue\f(CW\fR" 4
+.IX Item "-option=value"
+.ie n .IP """\-option \fIvalue\fP""" 4
+.el .IP "\f(CW\-option \f(CIvalue\f(CW\fR" 4
+.IX Item "-option value"
+.ie n .IP """\-\-o=\fIvalue\fP""" 4
+.el .IP "\f(CW\-\-o=\f(CIvalue\f(CW\fR" 4
+.IX Item "--o=value"
+.ie n .IP """\-\-o \fIvalue\fP""" 4
+.el .IP "\f(CW\-\-o \f(CIvalue\f(CW\fR" 4
+.IX Item "--o value"
+.ie n .IP """\-o=\fIvalue\fP""" 4
+.el .IP "\f(CW\-o=\f(CIvalue\f(CW\fR" 4
+.IX Item "-o=value"
+.ie n .IP """\-o \fIvalue\fP""" 4
+.el .IP "\f(CW\-o \f(CIvalue\f(CW\fR" 4
+.IX Item "-o value"
+.PD
+.PP
+
 .P
 The following options are recognized:
 
-.TP
-.B \-\-help, \-h
-Display a list of available options with brief explanations.
+.IP "\fB\-\-help\fR" 4
+.IX Item "--help"
+.PD 0
+.IP "\fB\-h\fR" 4
+.IX Item "-h"
+.PD
+List all options, with brief explanations.
 
-.TP
-.B \-\-symbols=\fIfile\fR, \-s \fIfile\fR
+.IP "\fB\-\-version\fR" 4
+.IX Item "--version"
+Print version information and then exit.
+
+.IP "\fB\-\-symbols=\fR\fIfile\fR" 4
+.IX Item "--symbols=file"
+.PD 0
+.IP "\fB\-s\fR \fIfile\fR" 4
+.IX Item "-s file"
+.PD
 Read symbol table from \fIfile\fR.
 
-.TP
-.B \-\-command=\fIfile\fR, \-x \fIfile\fR
-Execute GDB commands from \fIfile\fR.
+.IP "\fB\-\-command=\fR\fIfile\fR" 4
+.IX Item "--command=file"
+.PD 0
+.IP "\fB\-x\fR \fIfile\fR" 4
+.IX Item "-x file"
+.PD
+Execute \s-1GDB\s0 commands from \fIfile\fR.
 
-.TP
-.B \-\-eval\-command=\fIcommand\fR, \-ex \fIcommand\fR
-Execute the given GDB \fIcommand\fR.
+.IP "\fB\-\-eval\-command=\fR\fIcommand\fR" 4
+.IX Item "--eval-command=command"
+.PD 0
+.IP "\fB\-ex\fR \fIcommand\fR" 4
+.IX Item "-ex command"
+.PD
+Execute given \s-1GDB\s0 \fIcommand\fR.
 
-.TP
-.B \-\-directory=\fIdirectory\fR, \-d \fIdirectory\fR
-Add \fIdirectory\fR to the search path for source files.
+.IP "\fB\-\-init\-eval\-command=\fR\fIcommand\fR" 4
+.IX Item "--init-eval-command=command"
+.PD 0
+.IP "\fB\-iex\fR" 4
+.IX Item "-iex"
+.PD
+Execute \s-1GDB\s0 \fIcommand\fR before loading the inferior.
 
-.TP
-.B \-\-tui
-Open GDB in terminal user interface mode.
+.IX Item "--directory=directory"
+.PD 0
+.IP "\fB\-d\fR \fIdirectory\fR" 4
+.IX Item "-d directory"
+.PD
+Add \fIdirectory\fR to the path to search for source files.
 
-.TP
-.B \-\-cd=\fIdirectory\fR
-Run GDB with \fIdirectory\fR as its working directory.
+.IP "\fB\-\-cd=\fR\fIdirectory\fR" 4
+.IX Item "--cd=directory"
+Run \s-1GDB\s0 using \fIdirectory\fR as its working directory,
+instead of the current directory.
+
+.IP "\fB\-\-tui\fR" 4
+.IX Item "--tui"
+Open the terminal user interface.
+
+.IP "\fB\-\-nh\fR" 4
+.IX Item "--nh"
+Do not execute commands from \fI~/.config/gdb/gdbinit\fR,
+\&\fI~/.gdbinit\fR, \fI~/.config/gdb/gdbearlyinit\fR, or
+\&\fI~/.gdbearlyinit\fR
+
+.IP "\fB\-\-nx\fR" 4
+.IX Item "--nx"
+.PD 0
+.IP "\fB\-n\fR" 4
+.IX Item "-n"
+.PD
+Do not execute commands from any \fI.gdbinit\fR or
+\&\fI.gdbearlyinit\fR initialization files.
+
+.IP "\fB\-\-quiet\fR" 4
+.IX Item "--quiet"
+.PD 0
+.IP "\fB\-\-silent\fR" 4
+.IX Item "--silent"
+.IP "\fB\-q\fR" 4
+.IX Item "-q"
+.PD
+\&\*(L"Quiet\*(R".  Do not print the introductory and copyright messages.
+
+.PP
 
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"

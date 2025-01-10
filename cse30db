@@ -4,22 +4,29 @@ usage="Usage: cse30db [GDB options] <program> [program args]
 
 Accepted GDB options:
     --help, -h
+    --version, -v
     --symbols=<file>, -s <file>
     --command=<file>, -x <file>
     --eval-command=<cmd>, -ex <cmd>
+    --init-eval-command=<cmd>, -iex <cmd>
     --directory=<dir>, -d <dir>
-    --tui
-    --cd=<dir>
+    --cd=<dir>, -cd <dir>
+    --tui, -tui
+    --nh, -nh
+    --nx, -n
+    --quite, --silent, -q
 
 Examples:
-    cse30db ./prog                       # Run the binary prog under GDB
-    cse30db ./prog arg1 arg2             # Run prog with arguments arg1 and arg2 under GDB.
-    cse30db ./prog arg1 arg2 < input.txt # Redirect input.txt to prog's stdin.
+    cse30db ./prog                    # Run the binary prog under GDB
+    cse30db ./prog arg1 arg2          # Run prog with arguments arg1 and arg2 under GDB.
+    cse30db ./prog arg1 < input.txt   # Redirect input.txt to prog's stdin.
 
 Notes:
     - Redirection applies to the program being debugged, not GDB.
+    - The 'run' command is unavailable in gdb interactive command line. The program will automatically run and stop at breakpoint 'main'.
     - For more information, see the man page: man cse30db
 "
+ORIG_DIR="$(pwd)"
 
 PRE_GDB_ARGS=()
 POST_GDB_ARGS=()
@@ -27,82 +34,157 @@ POST_GDB_ARGS=()
 BINARY=""
 PROGRAM_ARGS=()
 
+REQUEST_CD=""
+
 print_usage_and_exit() {
     echo "$usage"
     exit 1
 }
 
-startswith() {
-    [[ "$1" == "$2"* ]]
+_OPTVAL=""
+_NEED_SHIFT=0
+parse_opt_value() {
+    local arg="$1"
+    _OPTVAL=""
+    _NEED_SHIFT=0
+
+    if [[ "$arg" =~ ^[^=]+=(.*)$ ]]; then
+        _OPTVAL="${BASH_REMATCH[1]}"
+        return
+    fi
+
+    _NEED_SHIFT=1
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+    -h | --h | -help | --help)
+        print_usage_and_exit
+        ;;
 
-        -h|--help)
-            print_usage_and_exit
-            ;;
+    -v | --v | -version | --version)
+        /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gdb --version
+        exit 0
+        ;;
 
-        -s|--symbols=*)
-            if [[ "$1" == "-s" ]]; then
-                shift
-                [[ -z "$1" ]] && print_usage_and_exit
-                PRE_GDB_ARGS+=("-s" "$1")
-            else
-                file="${1#*=}"
-                PRE_GDB_ARGS+=("--symbols=$file")
-            fi
-            ;;
-
-        -d|--directory=*)
-            if [[ "$1" == "-d" ]]; then
-                shift
-                [[ -z "$1" ]] && print_usage_and_exit
-                PRE_GDB_ARGS+=("-d" "$1")
-            else
-                dir="${1#*=}"
-                PRE_GDB_ARGS+=("--directory=$dir")
-            fi
-            ;;
-
-        --tui)
-            PRE_GDB_ARGS+=("--tui")
-            ;;
-
-        --cd=*)
-            dir="${1#*=}"
-            PRE_GDB_ARGS+=("--cd=$dir")
-            ;;
-
-        -x)
+    -s | --s | -symbols | --symbols)
+        parse_opt_value "$1"
+        if [[ "$_NEED_SHIFT" -eq 1 ]]; then
             shift
             [[ -z "$1" ]] && print_usage_and_exit
-            POST_GDB_ARGS+=("-x" "$1")
-            ;;
-        --command=*)
-            file="${1#*=}"
-            POST_GDB_ARGS+=("--command=$file")
-            ;;
-        -ex)
+            _OPTVAL="$1"
+        fi
+        PRE_GDB_ARGS+=("-s" "$_OPTVAL")
+        ;;
+
+    -s=* | --s=* | -symbols=* | --symbols=*)
+        _OPTVAL="${1#*=}"
+        PRE_GDB_ARGS+=("-s" "$_OPTVAL")
+        ;;
+
+    -d | --d | -directory | --directory)
+        parse_opt_value "$1"
+        if [[ "$_NEED_SHIFT" -eq 1 ]]; then
             shift
             [[ -z "$1" ]] && print_usage_and_exit
-            POST_GDB_ARGS+=("-ex" "$1")
-            ;;
-        --eval-command=*)
-            cmd="${1#*=}"
-            POST_GDB_ARGS+=("--eval-command=$cmd")
-            ;;
+            _OPTVAL="$1"
+        fi
+        PRE_GDB_ARGS+=("-d" "$_OPTVAL")
+        ;;
 
-        -*)
-            print_usage_and_exit
-            ;;
-        *)
-            if [[ -z "$BINARY" ]]; then
-                BINARY="$1"
-            else
-                PROGRAM_ARGS+=( "$1" )
-            fi
-            ;;
+    -d=* | --d=* | -directory=* | --directory=*)
+        _OPTVAL="${1#*=}"
+        PRE_GDB_ARGS+=("-d" "$_OPTVAL")
+        ;;
+
+    -x | --x | -command | --command)
+        parse_opt_value "$1"
+        if [[ "$_NEED_SHIFT" -eq 1 ]]; then
+            shift
+            [[ -z "$1" ]] && print_usage_and_exit
+            _OPTVAL="$1"
+        fi
+        POST_GDB_ARGS+=("-x" "$_OPTVAL")
+        ;;
+
+    -x=* | --x=* | -command=* | --command=*)
+        _OPTVAL="${1#*=}"
+        POST_GDB_ARGS+=("-x" "$_OPTVAL")
+        ;;
+
+    -ex | --ex | -eval-command | --eval-command)
+        parse_opt_value "$1"
+        if [[ "$_NEED_SHIFT" -eq 1 ]]; then
+            shift
+            [[ -z "$1" ]] && print_usage_and_exit
+            _OPTVAL="$1"
+        fi
+        POST_GDB_ARGS+=("-ex" "$_OPTVAL")
+        ;;
+
+    -ex=* | --ex=* | -eval-command=* | --eval-command=*)
+        _OPTVAL="${1#*=}"
+        POST_GDB_ARGS+=("-ex" "$_OPTVAL")
+        ;;
+
+    -iex | --iex | -init-eval-command | --init-eval-command)
+        parse_opt_value "$1"
+        if [[ "$_NEED_SHIFT" -eq 1 ]]; then
+            shift
+            [[ -z "$1" ]] && print_usage_and_exit
+            _OPTVAL="$1"
+        fi
+        PRE_GDB_ARGS+=("-iex" "$_OPTVAL")
+        ;;
+
+    -iex=* | --iex=* | -init-eval-command=* | --init-eval-command=*)
+        _OPTVAL="${1#*=}"
+        PRE_GDB_ARGS+=("-iex" "$_OPTVAL")
+        ;;
+
+    --tui | -tui)
+        PRE_GDB_ARGS+=("--tui")
+        ;;
+
+    --nh | -nh)
+        PRE_GDB_ARGS+=("--nh")
+        ;;
+
+    --nx | -nx | --n | -n)
+        PRE_GDB_ARGS+=("--nx")
+        ;;
+    --quiet | -quiet | --silent | -silent | --q | -q)
+        PRE_GDB_ARGS+=("--quiet")
+        ;;
+
+    --cd | -cd)
+        parse_opt_value "$1"
+        if [[ "$_NEED_SHIFT" -eq 1 ]]; then
+            shift
+            [[ -z "$1" ]] && print_usage_and_exit
+            _OPTVAL="$1"
+        fi
+        REQUEST_CD="$_OPTVAL"
+        PRE_GDB_ARGS+=("--cd=$REQUEST_CD")
+        ;;
+
+    --cd=* | -cd*)
+        _OPTVAL="${1#*=}"
+        REQUEST_CD="$_OPTVAL"
+        PRE_GDB_ARGS+=("--cd=$REQUEST_CD")
+        ;;
+
+    -*)
+        print_usage_and_exit
+        ;;
+
+    *)
+        if [[ -z "$BINARY" ]]; then
+            BINARY="$1"
+        else
+            PROGRAM_ARGS+=("$1")
+        fi
+        ;;
     esac
     shift
 done
@@ -111,19 +193,47 @@ if [[ -z "$BINARY" ]]; then
     print_usage_and_exit
 fi
 
+if [[ -n "$REQUEST_CD" ]]; then
+    if ! cd "$REQUEST_CD" 2>/dev/null; then
+        echo "Error: cannot cd to '$REQUEST_CD'"
+        exit 1
+    fi
+fi
+
+if [[ ! -f "$BINARY" ]]; then
+    echo "Error: '$BINARY' does not exist."
+    exit 1
+fi
+
+file_out="$(file -b "$BINARY" 2>/dev/null)"
+if [[ "$file_out" != *"ELF 32-bit LSB"* || "$file_out" != *"ARM,"* ]]; then
+    echo "Error: '$BINARY' is not a 32-bit ARM ELF."
+    echo "File info: $file_out"
+    exit 1
+fi
 
 exec 3<&0
 
 QEMU_PORT=$(comm -23 <(seq 10000 20000 | sort) \
-    <(netstat -tln 2>/dev/null | awk '{print $4}' | grep -oE '[0-9]+$' | sort -u) \
-    | shuf -n 1)
+    <(netstat -tln 2>/dev/null | awk '{print $4}' | grep -oE '[0-9]+$' | sort -u) |
+    shuf -n 1)
 
 /usr/bin/qemu-arm-static -g "$QEMU_PORT" "$BINARY" "${PROGRAM_ARGS[@]}" <&3 &
 QEMU_PID=$!
 
+MAX_WAIT=50
+count=0
 while ! netstat -tln 2>/dev/null | grep -q ":$QEMU_PORT"; do
     sleep 0.1
+    count=$((count + 1))
+    if ((count >= MAX_WAIT)); then
+        echo "Error: QEMU did not start listening on port $QEMU_PORT within 5 seconds."
+        kill "$QEMU_PID" 2>/dev/null
+        exit 1
+    fi
 done
+
+cd "$ORIG_DIR"
 
 if TTY_DEVICE=$(tty 2>/dev/null); then
     GDB_TTY="$TTY_DEVICE"
@@ -138,7 +248,7 @@ fi
     --ex="break main" \
     --ex="continue" \
     "${POST_GDB_ARGS[@]}" \
-    < "$GDB_TTY" > "$GDB_TTY"
+    <"$GDB_TTY" >"$GDB_TTY"
 
 kill "$QEMU_PID" 2>/dev/null
 
