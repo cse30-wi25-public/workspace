@@ -4,14 +4,28 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /
 
+# PL user
+RUN useradd -m -s /bin/bash student
+RUN OLD_UID="$(id -u student)" && \
+    OLD_GID="$(id -g student)" && \
+    NEW_UID=1001 && \
+    NEW_GID=1001 && \
+    groupmod -g "$NEW_GID" student && \
+    usermod -u "$NEW_UID" -g "$NEW_GID" student && \
+    find /home -user "$OLD_UID" -execdir chown -h "$NEW_UID" {} + && \
+    find /home -group "$OLD_GID" -execdir chgrp -h "$NEW_GID" {} +
+ENV PL_USER student
+
 # x86 tools
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-        sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev software-properties-common && \
-    add-apt-repository ppa:maveonair/helix-editor && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        vim neovim emacs-nox helix nano tmux clangd ccls bear ssh git less file \
-        qemu-user-static
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
+        vim neovim emacs-nox nano tmux ssh git less file && \
+    # helix
+    curl -L https://github.com/helix-editor/helix/releases/download/25.01/helix-25.01-x86_64-linux.tar.xz | tar -xJv -C / &&\
+    rm -rf /helix-25.01-x86_64-linux/runtime/grammars &&\
+    mv /helix-25.01-x86_64-linux/hx /usr/bin &&\
+    mv /helix-25.01-x86_64-linux/runtime /usr/bin/runtime &&\
+    rm -rf /helix-25.01-x86_64-linux
 
 # timezone
 RUN ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime \
@@ -24,7 +38,9 @@ RUN update-alternatives --set vim /usr/bin/vim.basic && \
     echo "(setq native-comp-driver-options '(\"-B/usr/bin/\" \"-fPIC\" \"-O2\"))" >> /etc/emacs/site-start.d/00-native-compile.el
 
 # arm gnu toolchain
-RUN curl -L https://static.jyh.sb/source/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -O && \
+RUN curl -L https://github.com/multiarch/qemu-user-static/releases/download/v7.2.0-1/qemu-arm-static -o /usr/bin/qemu-arm-static && \
+    chmod +x /usr/bin/qemu-arm-static && \
+    curl -L https://static.jyh.sb/source/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -O && \
     tar -xvf /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz -C / && \
     mv /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf /usr/arm-gnu-toolchain && \
     rm /arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
@@ -69,7 +85,7 @@ RUN sed -i 's/armv7/arm/g' ./configure && \
                 CFLAGS=-static \
                 CC=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc \
                 CPP=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp && \
-    make CFLAGS+="-fPIC" && \
+    make CFLAGS+="-fPIC" -j"$(nproc)" && \
     make install
 WORKDIR /
 RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
@@ -91,27 +107,17 @@ ENV LD_PRELOAD /usr/lib/hook_execve.so
 # xterm js
 COPY src /xterm
 WORKDIR /xterm
-RUN /bin/bash -o pipefail -c "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -" &&\
-    apt-get update &&\
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&\
+    apt-get update && \
     apt-get install -y --no-install-recommends \
-        nodejs=22.12.0-1nodesource1 &&\
-    npm install -g yarn@1.22.22 &&\
-    yarn install --frozen-lockfile &&\
-    yarn cache clean &&\
+        nodejs=22.12.0-1nodesource1 && \
+    npm install -g yarn@1.22.22 && \
+    yarn install --frozen-lockfile && \
+    yarn cache clean && \
+    npm uninstall -g yarn && \
+    rm -rf /root/.cache/yarn && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 EXPOSE 8080
-
-# PL user
-RUN useradd -m -s /bin/bash student
-RUN OLD_UID="$(id -u student)" && \
-    OLD_GID="$(id -g student)" && \
-    NEW_UID=1001 && \
-    NEW_GID=1001 && \
-    groupmod -g "$NEW_GID" student && \
-    usermod -u "$NEW_UID" -g "$NEW_GID" student && \
-    find /home -user "$OLD_UID" -execdir chown -h "$NEW_UID" {} + && \
-    find /home -group "$OLD_GID" -execdir chgrp -h "$NEW_GID" {} +
-ENV PL_USER student
 
 # gosu helper
 COPY --chmod=0755 --chown=root:root gosu-entry /usr/bin/
