@@ -57,6 +57,12 @@ parse_opt_value() {
 }
 
 while [[ $# -gt 0 ]]; do
+    if [[ -n "$BINARY" ]]; then
+        PROGRAM_ARGS+=("$1")
+        shift
+        continue
+    fi
+
     case "$1" in
     -h | --h | -help | --help)
         print_usage_and_exit
@@ -179,11 +185,7 @@ while [[ $# -gt 0 ]]; do
         ;;
 
     *)
-        if [[ -z "$BINARY" ]]; then
-            BINARY="$1"
-        else
-            PROGRAM_ARGS+=("$1")
-        fi
+        BINARY="$1"
         ;;
     esac
     shift
