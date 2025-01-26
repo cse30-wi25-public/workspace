@@ -102,7 +102,7 @@ RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
     /usr/bin/gcc -shared -fPIC -o hook_execve.so hook_execve.c -ldl -lssl -lcrypto && \
     mv /hook_execve.so /usr/lib/hook_execve.so && \
     rm hook_execve.c
-ENV LD_PRELOAD /usr/lib/hook_execve.so
+# ENV LD_PRELOAD /usr/lib/hook_execve.so
 
 # xterm js
 COPY src /xterm
