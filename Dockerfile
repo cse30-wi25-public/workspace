@@ -76,24 +76,24 @@ RUN chmod +x /usr/armbin/gdb /usr/armbin/cse30db
 COPY cse30db.1 /usr/local/man/man1/
 
 # cross compile valgrind
-# RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \
-#     tar -jxf valgrind-3.24.0.tar.bz2
-# WORKDIR /valgrind-3.24.0
-# RUN sed -i 's/armv7/arm/g' ./configure && \
-#     ./configure --host=arm-none-linux-gnueabihf \
-#                 --prefix=/usr/local \
-#                 CFLAGS=-static \
-#                 CC=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc \
-#                 CPP=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp && \
-#     make CFLAGS+="-fPIC" -j"$(nproc)" && \
-#     make install
-# WORKDIR /
-# RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
-#     mv /usr/local/libexec/valgrind/memcheck-arm-linux /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper && \
-#     echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux && \
-#     echo 'exec qemu-arm-static /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper "$@"' >> /usr/local/libexec/valgrind/memcheck-arm-linux && \
-#     chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux
-# ENV VALGRIND_OPTS="--vgdb=no"
+RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \
+    tar -jxf valgrind-3.24.0.tar.bz2
+WORKDIR /valgrind-3.24.0
+RUN sed -i 's/armv7/arm/g' ./configure && \
+    ./configure --host=arm-none-linux-gnueabihf \
+                --prefix=/usr/local \
+                CFLAGS=-static \
+                CC=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc \
+                CPP=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp && \
+    make CFLAGS+="-fPIC" -j"$(nproc)" && \
+    make install
+WORKDIR /
+RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
+    mv /usr/local/libexec/valgrind/memcheck-arm-linux /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper && \
+    echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux && \
+    echo 'exec qemu-arm-static /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper "$@"' >> /usr/local/libexec/valgrind/memcheck-arm-linux && \
+    chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux
+ENV VALGRIND_OPTS="--vgdb=no"
 
 # exec hook
 COPY hook_execve.c check_arch_arm.c /
@@ -130,6 +130,4 @@ RUN mkdir -p /run /var/run && \
 
 ENV PATH="/usr/armbin:$PATH"
 USER student
-# ENTRYPOINT ["/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
-# ENTRYPOINT ["env", "LD_PRELOAD=", "/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
 ENTRYPOINT ["/usr/bin/container-entry"]
