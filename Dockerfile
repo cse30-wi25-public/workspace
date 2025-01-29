@@ -68,11 +68,9 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-size /usr/armbin/size
 
 # gdb wrapper & man page
-RUN apt-get install -y unminimize man-db && \
-    echo 'y' | unminimize && \
-    mkdir -p /usr/local/man/man1
 COPY gdb cse30db /usr/armbin/
-RUN chmod +x /usr/armbin/gdb /usr/armbin/cse30db
+RUN mkdir -p /usr/local/man/man1 && \
+    chmod +x /usr/armbin/gdb /usr/armbin/cse30db
 COPY cse30db.1 /usr/local/man/man1/
 
 # cross compile valgrind
