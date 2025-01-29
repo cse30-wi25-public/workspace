@@ -76,32 +76,34 @@ RUN chmod +x /usr/armbin/gdb /usr/armbin/cse30db
 COPY cse30db.1 /usr/local/man/man1/
 
 # cross compile valgrind
-RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \
-    tar -jxf valgrind-3.24.0.tar.bz2
-WORKDIR /valgrind-3.24.0
-RUN sed -i 's/armv7/arm/g' ./configure && \
-    ./configure --host=arm-none-linux-gnueabihf \
-                --prefix=/usr/local \
-                CFLAGS=-static \
-                CC=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc \
-                CPP=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp && \
-    make CFLAGS+="-fPIC" -j"$(nproc)" && \
-    make install
-WORKDIR /
-RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
-    mv /usr/local/libexec/valgrind/memcheck-arm-linux /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper && \
-    echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux && \
-    echo 'exec qemu-arm-static /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper "$@"' >> /usr/local/libexec/valgrind/memcheck-arm-linux && \
-    chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux
-ENV VALGRIND_OPTS="--vgdb=no"
+# RUN curl -L https://static.jyh.sb/source/valgrind-3.24.0.tar.bz2 -O && \
+#     tar -jxf valgrind-3.24.0.tar.bz2
+# WORKDIR /valgrind-3.24.0
+# RUN sed -i 's/armv7/arm/g' ./configure && \
+#     ./configure --host=arm-none-linux-gnueabihf \
+#                 --prefix=/usr/local \
+#                 CFLAGS=-static \
+#                 CC=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc \
+#                 CPP=/usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp && \
+#     make CFLAGS+="-fPIC" -j"$(nproc)" && \
+#     make install
+# WORKDIR /
+# RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
+#     mv /usr/local/libexec/valgrind/memcheck-arm-linux /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper && \
+#     echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux && \
+#     echo 'exec qemu-arm-static /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper "$@"' >> /usr/local/libexec/valgrind/memcheck-arm-linux && \
+#     chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux
+# ENV VALGRIND_OPTS="--vgdb=no"
 
 # exec hook
-COPY hook_execve.c /
+COPY hook_execve.c check_arch_arm.c /
 RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
     sed -i "s|PLACEHOLDER_HASH|$QEMU_HASH|g" /hook_execve.c && \
     /usr/bin/gcc -shared -fPIC -o hook_execve.so hook_execve.c -ldl -lssl -lcrypto && \
+    /usr/bin/gcc -o check_arch_arm check_arch_arm.c && \
     mv /hook_execve.so /usr/lib/hook_execve.so && \
-    rm hook_execve.c
+    mv /check_arch_arm /usr/bin/check_arch_arm && \
+    rm hook_execve.c check_arch_arm.c
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
 # xterm js
@@ -121,10 +123,13 @@ EXPOSE 8080
 
 # gosu helper
 COPY --chmod=0755 --chown=root:root gosu-entry /usr/bin/
+COPY --chmod=0755 --chown=root:root container-entry /usr/bin/
 USER root
 RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
 ENV PATH="/usr/armbin:$PATH"
 USER student
-ENTRYPOINT ["/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
+# ENTRYPOINT ["/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
+# ENTRYPOINT ["env", "LD_PRELOAD=", "/usr/bin/gosu-entry", "node", "server.js", "-w", "/home/student"]
+ENTRYPOINT ["/usr/bin/container-entry"]

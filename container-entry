@@ -1,0 +1,9 @@
+#!/bin/bash
+
+/usr/bin/check_arch_arm
+RET=$?
+if [ "$RET" -eq 1 ]; then
+    env LD_PRELOAD= /usr/bin/gosu-entry node server.js -w /home/student
+else
+    /usr/bin/gosu-entry node server.js -w /home/student
+fi
