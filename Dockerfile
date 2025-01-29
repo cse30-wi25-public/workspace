@@ -68,9 +68,12 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-size /usr/armbin/size
 
 # gdb wrapper & man page
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y unminimize man-db && \
+    yes | /usr/bin/unminimize || [ $? -eq 141 ]
+    # mkdir -p /usr/local/man/man1
 COPY gdb cse30db /usr/armbin/
-RUN mkdir -p /usr/local/man/man1 && \
-    chmod +x /usr/armbin/gdb /usr/armbin/cse30db
+RUN chmod +x /usr/armbin/gdb /usr/armbin/cse30db
 COPY cse30db.1 /usr/local/man/man1/
 
 # cross compile valgrind
@@ -91,7 +94,7 @@ RUN rm -rf valgrind-3.24.0 valgrind-3.24.0.tar.bz2 && \
     echo '#!/bin/bash' > /usr/local/libexec/valgrind/memcheck-arm-linux && \
     echo 'exec qemu-arm-static /usr/local/libexec/valgrind/memcheck-arm-linux-wrapper "$@"' >> /usr/local/libexec/valgrind/memcheck-arm-linux && \
     chmod +x /usr/local/libexec/valgrind/memcheck-arm-linux
-ENV VALGRIND_OPTS="--vgdb=no"
+ENV VALGRIND_OPTS "--vgdb=no"
 
 # exec hook
 COPY hook_execve.c check_arch_arm.c /
@@ -126,6 +129,6 @@ USER root
 RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
-ENV PATH="/usr/armbin:$PATH"
+ENV PATH "/usr/armbin:$PATH"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
