@@ -19,7 +19,7 @@ ENV PL_USER student
 # x86 tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
         sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
-        vim neovim emacs-nox nano tmux ssh git less file && \
+        vim neovim emacs-nox nano tmux ssh git less file xxd && \
     # helix
     curl -L https://github.com/helix-editor/helix/releases/download/25.01/helix-25.01-x86_64-linux.tar.xz | tar -xJv -C / &&\
     rm -rf /helix-25.01-x86_64-linux/runtime/grammars &&\
