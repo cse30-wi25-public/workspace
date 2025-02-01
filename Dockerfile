@@ -56,7 +56,6 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-strip /usr/armbin/strip && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-ar /usr/armbin/ar && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-as /usr/armbin/as && \
-    ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc /usr/armbin/gcc && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-g++ /usr/armbin/g++ && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-cpp /usr/armbin/cpp && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-ld /usr/armbin/ld && \
@@ -65,7 +64,10 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-elfedit /usr/armbin/elfedit && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-objcopy /usr/armbin/objcopy && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-objdump /usr/armbin/objdump && \
-    ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-size /usr/armbin/size
+    ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-size /usr/armbin/size && \
+    echo '#!/bin/bash' > /usr/armbin/gcc && \
+    echo 'exec /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc -marm "$@"' >> /usr/armbin/gcc && \
+    chmod +x /usr/armbin/gcc
 
 # gdb wrapper & man page
 RUN apt-get update -y && \
@@ -123,7 +125,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&\
 EXPOSE 8080
 
 # gosu helper
-COPY --chmod=0755 --chown=root:root gosu-entry /usr/bin/
 COPY --chmod=0755 --chown=root:root container-entry /usr/bin/
 USER root
 RUN mkdir -p /run /var/run && \
