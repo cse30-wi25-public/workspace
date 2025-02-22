@@ -131,5 +131,6 @@ RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
 ENV PATH "/usr/armbin:$PATH"
+ENV IMAGE_VERSION="v0.2.1"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
