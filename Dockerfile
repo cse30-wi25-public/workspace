@@ -66,7 +66,7 @@ RUN ln -s /usr/arm-gnu-toolchain/bin/* /usr/bin/ &&\
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-objdump /usr/armbin/objdump && \
     ln -s /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-size /usr/armbin/size && \
     echo '#!/bin/bash' > /usr/armbin/gcc && \
-    echo 'exec /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc -marm "$@"' >> /usr/armbin/gcc && \
+    echo 'exec /usr/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-gcc $GCC_WRAPPER_FLAGS "$@"' >> /usr/armbin/gcc && \
     chmod +x /usr/armbin/gcc
 
 # gdb wrapper & man page
@@ -131,6 +131,6 @@ RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
 ENV PATH "/usr/armbin:$PATH"
-ENV IMAGE_VERSION="v0.2.1"
+ENV IMAGE_VERSION="v0.2.2"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
