@@ -143,7 +143,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&\
     apt-get update && \
     apt-get install -y --no-install-recommends \
         nodejs=22.12.0-1nodesource1 && \
-    npm install --production
+    npm install --production && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8080
 
 # gosu helper
@@ -156,4 +158,3 @@ ENV PATH "/usr/armbin:$PATH"
 ENV IMAGE_VERSION="v0.3.0"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
-# CMD ["/bin/bash"]
