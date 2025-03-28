@@ -1,4 +1,12 @@
-FROM ubuntu:24.04
+# xterm js multi stage build
+FROM node:22 AS xterm-builder
+COPY xterm /xterm-build
+WORKDIR /xterm-build
+RUN npm install && npx vite build
+
+
+# base image
+FROM ubuntu:24.04 AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -19,7 +27,7 @@ ENV PL_USER student
 # x86 tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
         sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
-        vim neovim emacs-nox nano tmux ssh git less file xxd && \
+        vim=2:9.1.0016-1ubuntu7.6 neovim emacs-nox nano tmux ssh git less file xxd && \
     # helix
     curl -L https://github.com/helix-editor/helix/releases/download/25.01/helix-25.01-x86_64-linux.tar.xz | tar -xJv -C / &&\
     rm -rf /helix-25.01-x86_64-linux/runtime/grammars &&\
@@ -34,8 +42,25 @@ RUN ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime \
 
 # set 'vim' command to use the native vim
 # set emacs native compile to use x86 gcc
+# setup vim osc52
 RUN update-alternatives --set vim /usr/bin/vim.basic && \
-    echo "(setq native-comp-driver-options '(\"-B/usr/bin/\" \"-fPIC\" \"-O2\"))" >> /etc/emacs/site-start.d/00-native-compile.el
+    echo "(setq native-comp-driver-options '(\"-B/usr/bin/\" \"-fPIC\" \"-O2\"))" >> /etc/emacs/site-start.d/00-native-compile.el && \
+    mkdir -p "/usr/share/vim/vim91/pack/vendor/start" && \
+    git clone --branch main https://github.com/ojroques/vim-oscyank.git "/usr/share/vim/vim91/pack/vendor/start/vim-oscyank" && \
+    echo -e 'if !has("nvim") && !has("clipboard_working")\n\
+        let s:VimOSCYankPostRegisters = ["", "+", "*"]\n\
+        let s:VimOSCYankOperators = ["y", "d"]\n\
+        function! s:VimOSCYankPostCallback(event)\n\
+            if index(s:VimOSCYankPostRegisters, a:event.regname) != -1\n\
+                        \\ && index(s:VimOSCYankOperators, a:event.operator) != -1\n\
+                call OSCYankRegister(a:event.regname)\n\
+            endif\n\
+        endfunction\n\
+        augroup VimOSCYankPost\n\
+            autocmd!\n\
+            autocmd TextYankPost * call s:VimOSCYankPostCallback(v:event)\n\
+        augroup END\n\
+    endif' >> /etc/vim/vimrc
 
 # arm gnu toolchain
 RUN curl -L https://github.com/multiarch/qemu-user-static/releases/download/v7.2.0-1/qemu-arm-static -o /usr/bin/qemu-arm-static && \
@@ -110,27 +135,25 @@ RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
 # xterm js
-COPY src /xterm
 WORKDIR /xterm
+COPY --from=xterm-builder /xterm-build/dist ./dist
+COPY --from=xterm-builder /xterm-build/server.mjs ./
+COPY --from=xterm-builder /xterm-build/package*.json ./
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&\
     apt-get update && \
     apt-get install -y --no-install-recommends \
         nodejs=22.12.0-1nodesource1 && \
-    npm install -g yarn@1.22.22 && \
-    yarn install --frozen-lockfile && \
-    yarn cache clean && \
-    npm uninstall -g yarn && \
-    rm -rf /root/.cache/yarn && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    npm install --production
 EXPOSE 8080
 
 # gosu helper
-COPY --chmod=0755 --chown=root:root container-entry /usr/bin/
+COPY --chmod=0755 --chown=root:root container-entry shell-entry /usr/bin/
 USER root
 RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
 ENV PATH "/usr/armbin:$PATH"
-ENV IMAGE_VERSION="v0.2.2"
+ENV IMAGE_VERSION="v0.3.0"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
+# CMD ["/bin/bash"]
