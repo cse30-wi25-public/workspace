@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ -n "$WS_DEBUG" ]; then
+    LOG_DIR="/home/student/.local/state/workspace-logs/$(date '+%Y-%m-%d_%H-%M-%S.%3N')"
+    mkdir -p "$LOG_DIR"
+    script -q -f -m advanced -T "$LOG_DIR/timing.log" -O "$LOG_DIR/out.log" -c "/bin/bash"
+else
+    /bin/bash
+fi
