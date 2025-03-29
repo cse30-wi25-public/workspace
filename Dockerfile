@@ -27,7 +27,7 @@ ENV PL_USER student
 # x86 tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
         sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
-        vim=2:9.1.0016-1ubuntu7.6 neovim emacs-nox nano tmux ssh git less file xxd && \
+        vim=2:9.1.0016-1ubuntu7.6 neovim emacs-nox nano tmux ssh git less file xxd asciinema && \
     # helix
     curl -L https://github.com/helix-editor/helix/releases/download/25.01/helix-25.01-x86_64-linux.tar.xz | tar -xJv -C / &&\
     rm -rf /helix-25.01-x86_64-linux/runtime/grammars &&\
@@ -158,3 +158,4 @@ ENV PATH "/usr/armbin:$PATH"
 ENV IMAGE_VERSION="v0.3.0"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
+# CMD ["/bin/bash"]

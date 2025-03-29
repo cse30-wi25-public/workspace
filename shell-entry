@@ -2,7 +2,7 @@
 if [ -n "$WS_DEBUG" ]; then
     /bin/bash
 else
-    LOG_DIR="/home/student/.local/state/workspace-logs/$(date '+%Y-%m-%d_%H-%M-%S.%3N')"
+    LOG_DIR="/home/student/.local/state/workspace-logs/"
     mkdir -p "$LOG_DIR"
-    script -q -f -m advanced -T "$LOG_DIR/timing.log" -O "$LOG_DIR/out.log" -c "/bin/bash"
+    asciinema rec "$LOG_DIR/$(date '+%Y-%m-%d_%H-%M-%S.%3N').cast" -q -c "/bin/bash"
 fi
