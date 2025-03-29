@@ -158,4 +158,3 @@ ENV PATH "/usr/armbin:$PATH"
 ENV IMAGE_VERSION="v0.3.0"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
-# CMD ["/bin/bash"]

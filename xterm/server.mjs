@@ -39,10 +39,10 @@ expressWs(app);
 
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 app.get('/debug', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 let websockets = {};
@@ -50,12 +50,12 @@ let ws_id = 0;
 let term_output = '';
 let term;
 
-function spawn_terminal() {
+function spawn_terminal(ncols=80, nrows=24) {
     term_output = '';
     term = pty.spawn(options.command, [], {
         name: 'xterm-color',
-        cols: 80,
-        rows: 24,
+        cols: ncols,
+        rows: nrows,
         cwd: options['working-dir'],
         env: { ...default_env, ...process.env },
     });
@@ -75,7 +75,7 @@ function spawn_terminal() {
                 ws.send('[Process completed]\r\n\r\n');
             }
         }
-        spawn_terminal();
+        spawn_terminal(term.cols, term.rows);
     });
 }
 spawn_terminal();
@@ -89,9 +89,11 @@ app.ws('/', (ws, req) => {
         const val = JSON.parse(msg);
         if (val.event === 'data') {
             term.write(val.value);
-        } else if (val.event === 'resize') {
+        }
+        else if (val.event === 'resize') {
             term.resize(val.value.cols, val.value.rows);
-        } else if (val.event === 'heartbeat') {
+        }
+        else if (val.event === 'heartbeat') {
             ws.send(JSON.stringify({ event: 'heartbeat-pong' }));
         }
     });
