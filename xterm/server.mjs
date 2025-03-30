@@ -2,6 +2,7 @@ import express from 'express';
 import expressWs from 'express-ws';
 import pty from 'node-pty';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
@@ -50,7 +51,7 @@ let ws_id = 0;
 let term_output = '';
 let term;
 
-function spawn_terminal(ncols=80, nrows=24) {
+function spawn_terminal(ncols = 80, nrows = 24) {
     term_output = '';
     term = pty.spawn(options.command, [], {
         name: 'xterm-color',
@@ -80,6 +81,19 @@ function spawn_terminal(ncols=80, nrows=24) {
 }
 spawn_terminal();
 
+const LOG_FILE = '/home/student/.local/state/workspace-logs/heartbeat.log';
+fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+function log_heart_beat(clientId) {
+    const now_sec = Math.floor(Date.now() / 1000);
+    const line = `${clientId} ${now_sec}\n`;
+
+    fs.appendFile(LOG_FILE, line, (err) => {
+        if (err) {
+            console.error('Failed to append heartbeat log:', err);
+        }
+    });
+}
+
 app.ws('/', (ws, req) => {
     const id = ws_id++;
     websockets[id] = ws;
@@ -94,6 +108,7 @@ app.ws('/', (ws, req) => {
             term.resize(val.value.cols, val.value.rows);
         }
         else if (val.event === 'heartbeat') {
+            log_heart_beat(id);
             ws.send(JSON.stringify({ event: 'heartbeat-pong' }));
         }
     });
@@ -142,4 +157,3 @@ app.ws('/debug', (ws, req) => {
 app.listen(options.port, () => {
     console.log(`XTerm server listening at http://localhost:${options.port}`);
 });
-
