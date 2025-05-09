@@ -1,12 +1,20 @@
 # xterm js multi stage build
-FROM node:22 AS xterm-builder
-COPY xterm /xterm-build
+FROM node:23-bullseye AS xterm-builder
 WORKDIR /xterm-build
-RUN npm install && npx vite build
+COPY xterm/package*.json ./
+RUN npm ci --omit=dev
+COPY xterm/ .
+RUN npx vite build
+
+
+FROM rust:1.86-bullseye AS workspace-logger-builder
+COPY workspace-logger /workspace-logger
+WORKDIR /workspace-logger
+RUN cargo build --release
 
 
 # base image
-FROM ubuntu:24.04 AS base
+FROM ubuntu:noble-20250404 AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -26,8 +34,8 @@ ENV PL_USER student
 
 # x86 tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev \
-        vim=2:9.1.0016-1ubuntu7.6 neovim emacs-nox nano tmux ssh git less file xxd asciinema && \
+        sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev manpages-dev \
+        vim=2:9.1.0016-1ubuntu7.8 neovim emacs-nox nano tmux ssh git less file xxd asciinema && \
     # helix
     curl -L https://github.com/helix-editor/helix/releases/download/25.01/helix-25.01-x86_64-linux.tar.xz | tar -xJv -C / &&\
     rm -rf /helix-25.01-x86_64-linux/runtime/grammars &&\
@@ -148,13 +156,17 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&\
 
 EXPOSE 8080
 
+# verbose-log
+COPY --from=workspace-logger-builder /workspace-logger/target/release/workspace-logger /usr/bin/workspace-logger
+
 # gosu helper
-COPY --chmod=0755 --chown=root:root container-entry shell-entry /usr/bin/
+COPY --chmod=0755 --chown=root:root container-entry shell-entry workspace-logger /usr/bin/
 USER root
 RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
 ENV PATH "/usr/armbin:$PATH"
-ENV IMAGE_VERSION="v0.3.0"
+ENV IMAGE_VERSION="v0.4.0"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
+# CMD ["/bin/bash"]
