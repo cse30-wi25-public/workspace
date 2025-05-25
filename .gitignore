@@ -1,3 +1,1 @@
-xterm/node_modules/
-xterm/dist/
-workspace-logger/target
+xterm-rs/target

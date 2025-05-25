@@ -7,7 +7,16 @@ if [ "$RET" -eq 1 ]; then
     export LD_PRELOAD=""
 fi
 
-CMD=(node server.mjs -w /home/student -c /usr/bin/shell-entry)
+args=()
+[[ -n $LOG_LEVEL        ]] && args+=(--log-level        "$LOG_LEVEL")
+[[ -n $VERBOSE_INTERVAL ]] && args+=(--verbose-interval "$VERBOSE_INTERVAL")
+[[ -n $HISTORY_LIMIT    ]] && args+=(--history-limit    "$HISTORY_LIMIT")
+
+mkdir -p /home/student/.local/state/workspace-logs
+mkdir -p /home/student/.config
+
+CMD=(/xterm/xterm-rs --resource /xterm/static --port 8080)
+CMD+=("${args[@]}")
 
 if [ "$(id -u)" -eq 0 ] ; then
     NORMAL_USER="$(id -un 1001)"

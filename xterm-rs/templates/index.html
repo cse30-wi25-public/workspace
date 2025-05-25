@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" href="static/css/xterm.css" />
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                background: #000;
+            }
+            #terminal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                bottom: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="terminal"></div>
+
+        <script type="module">
+            import { Terminal } from "./static/js/xterm.mjs";
+            import { FitAddon } from "./static/js/addon-fit.mjs";
+            import { ClipboardAddon } from "./static/js/addon-clipboard.mjs";
+            import { makeKeyHandler } from "./static/js/layout.mjs";
+            import themes from "./static/js/themes.min.mjs";
+
+            let currentLayout = "qwerty";
+
+            function initTerminal() {
+                const term = new Terminal({
+                    scrollback: 1000,
+                    fontFamily: "courier new, courier, monospace",
+                    reflowOnResize: true,
+                });
+                const fitAddon = new FitAddon();
+                term.loadAddon(fitAddon);
+
+                const clipboardAddon = new ClipboardAddon();
+                term.loadAddon(clipboardAddon);
+
+                const container = document.getElementById("terminal");
+                term.open(container);
+                fitAddon.fit();
+
+                const base = location.pathname.endsWith("/") ? location.pathname : location.pathname + "/";
+
+                const wsURL = new URL(base + "ws", location);
+
+                wsURL.protocol = wsURL.protocol === "https:" ? "wss:" : "ws:";
+
+                console.log("connect to", wsURL.href);
+                const socket = new WebSocket(wsURL);
+                socket.binaryType = "arraybuffer";
+                const decoder = new TextDecoder("utf-8", { fatal: false });
+
+                let historyReady = false;
+                let historyReadyTimer;
+
+                function unlockInput() {
+                    if (historyReady) return;
+                    historyReady = true;
+                    clearTimeout(historyReadyTimer);
+
+                    term.onData((data) => {
+                        socket.send(JSON.stringify({ event: "data", value: data }));
+                    });
+                }
+
+                socket.onopen = () => {
+                    function doResize() {
+                        fitAddon.fit();
+                        socket.send(
+                            JSON.stringify({
+                                event: "resize",
+                                value: { rows: term.rows, cols: term.cols },
+                            }),
+                        );
+                    }
+                    window.addEventListener("resize", doResize);
+                    doResize();
+
+                    setInterval(() => {
+                        socket.send(JSON.stringify({ event: "heartbeat" }));
+                    }, 10_000);
+
+                    socket.onmessage = (msg) => {
+                        if (typeof msg.data === "string") {
+                            try {
+                                const data = JSON.parse(msg.data);
+                                if (data.event === "heartbeat-pong") {
+                                    console.log("[Client] heartbeat-pong");
+                                }
+                                else if (data.event === "config") {
+                                    const theme = data.value.theme;
+                                    const layout = data.value.layout;
+                                    term.options.theme = themes[theme];
+                                    document.body.style.background = themes[theme]?.background ?? "#000";
+
+                                    currentLayout = layout;
+                                }
+                                else {
+                                    console.log("[Client] message:", data);
+                                }
+                            }
+                            catch (err) {
+                                console.log("Error parsing JSON:", err);
+                            }
+                        }
+                        else {
+                            const data = decoder.decode(msg.data, { stream: true });
+                            term.write(data, () => {
+                                unlockInput();
+                            });
+                        }
+                    };
+
+                    const keyHandler = makeKeyHandler(socket, () => currentLayout);
+                    term.attachCustomKeyEventHandler(keyHandler);
+                };
+            }
+
+            document.addEventListener("DOMContentLoaded", initTerminal);
+        </script>
+    </body>
+</html>

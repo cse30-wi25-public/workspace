@@ -1,8 +1,0 @@
-#!/bin/bash
-if [ -n "$WS_DEBUG" ]; then
-    /bin/bash
-else
-    LOG_DIR=$(dirname "$CAST_FULL_PATH")
-    mkdir -p "$LOG_DIR"
-    asciinema rec "$CAST_FULL_PATH" -q -c "/bin/bash"
-fi
