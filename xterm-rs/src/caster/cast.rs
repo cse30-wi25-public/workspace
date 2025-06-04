@@ -36,13 +36,15 @@ fn encode_evt(e: &RawEvt) -> Vec<u8> {
     v.push(e.kind as u8);
 
     let mut len_buf = [0u8; 5];
-    let var = varint::u32(e.payload.len() as u32, &mut len_buf);
-    v.extend_from_slice(var);
+    if matches!(e.kind, EventKind::Input | EventKind::Output) {
+        let var = varint::u32(e.payload.len() as u32, &mut len_buf);
+        v.extend_from_slice(var);
+    }
     v.extend_from_slice(&e.payload);
     v
 }
 
-fn write_cast(file: &mut BufWriter<std::fs::File>, bytes: &[u8]) -> std::io::Result<()> {
+fn write_binary(file: &mut BufWriter<std::fs::File>, bytes: &[u8]) -> std::io::Result<()> {
     file.write_all(bytes)?;
     file.flush()
 }
@@ -88,6 +90,14 @@ impl Caster {
             let mut flush_stdout = time::interval(Duration::from_secs(verbose_interval.into()));
             flush_stdout.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
 
+            // skip the first tick
+            flush_disk.tick().await;
+            flush_stdout.tick().await;
+            write_binary(&mut cast_file, &timestamp.to_le_bytes()).ok();
+            if verbose_log {
+                buf_stdout.extend_from_slice(&timestamp.to_le_bytes());
+            }
+
             let (mut rows, mut cols) = stty_size;
 
             loop {
@@ -96,11 +106,11 @@ impl Caster {
                         match evt.kind {
                             EventKind::Input => {
                                 let bytes = encode_evt(&evt);
-                                write_cast(&mut cast_file, &bytes).ok();
+                                write_binary(&mut cast_file, &bytes).ok();
                             }
                             EventKind::Resize => {
                                 let bytes = encode_evt(&evt);
-                                write_cast(&mut cast_file, &bytes).ok();
+                                write_binary(&mut cast_file, &bytes).ok();
                                 rows = u16::from_le_bytes([evt.payload[0], evt.payload[1]]);
                                 cols = u16::from_le_bytes([evt.payload[2], evt.payload[3]]);
                                 if verbose_log {
@@ -128,7 +138,7 @@ impl Caster {
                                 payload: trimmed.to_vec(),
                             };
                             let bytes = encode_evt(&evt);
-                            write_cast(&mut cast_file, &bytes).ok();
+                            write_binary(&mut cast_file, &bytes).ok();
                             if verbose_log {
                                 buf_stdout.extend_from_slice(&bytes);
                             }

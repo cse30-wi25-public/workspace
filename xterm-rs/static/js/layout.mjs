@@ -44,6 +44,8 @@ export function makeKeyHandler(socket, getLayout) {
         }
         if (ev.type !== "keydown" || ev.repeat) return true;
 
+        if (ev.ctrlKey || ev.altKey || ev.metaKey) return true;
+
         const table = layouts[getLayout()] ?? null;
         const base = table ? table[ev.code] : null;
         if (!base) return true;
@@ -61,13 +63,5 @@ function buildSeq(e, base) {
     const lower = base.toLowerCase();
     const withShift = shifted[upper] ?? upper;
 
-    if (e.ctrlKey && (e.altKey || e.metaKey)) return "\x1B" + ctrlCode(upper);
-
-    if (e.ctrlKey) return ctrlCode(upper);
-
-    if (e.altKey || e.metaKey) return "\x1B" + (wantUpper ? withShift : lower);
-
     return wantUpper ? withShift : lower;
 }
-
-const ctrlCode = (ch) => String.fromCharCode(ch.charCodeAt(0) & 0x1f);
