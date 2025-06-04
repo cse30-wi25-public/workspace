@@ -1,17 +1,14 @@
-# xterm js multi stage build
+# xterm js files multi stage build
 FROM node:23-bullseye AS xterm-builder
-WORKDIR /xterm-build
-COPY xterm/package*.json ./
-RUN npm ci --omit=dev
-COPY xterm/ .
-RUN npx vite build
+WORKDIR /xtermjs
+RUN npm install @xterm/xterm@5.6.0-beta.107 && \
+    npm install @xterm/addon-fit@0.11.0-beta.107 && \
+    npm install @xterm/addon-clipboard@0.2.0-beta.90
 
-
-FROM rust:1.86-bullseye AS workspace-logger-builder
-COPY workspace-logger /workspace-logger
-WORKDIR /workspace-logger
+FROM rust:1.86-bullseye AS xterm-rs-builder
+COPY xterm-rs /xterm-rs
+WORKDIR /xterm-rs
 RUN cargo build --release
-
 
 # base image
 FROM ubuntu:noble-20250404 AS base
@@ -35,7 +32,7 @@ ENV PL_USER student
 # x86 tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
         sudo gosu ca-certificates curl wget bzip2 net-tools build-essential libssl-dev manpages-dev \
-        vim=2:9.1.0016-1ubuntu7.8 neovim emacs-nox nano tmux ssh git less file xxd asciinema && \
+        vim=2:9.1.0016-1ubuntu7.8 neovim emacs-nox nano tmux ssh git less file xxd && \
     # helix
     curl -L https://github.com/helix-editor/helix/releases/download/25.01/helix-25.01-x86_64-linux.tar.xz | tar -xJv -C / &&\
     rm -rf /helix-25.01-x86_64-linux/runtime/grammars &&\
@@ -142,31 +139,25 @@ RUN QEMU_HASH="$(sha256sum /usr/bin/qemu-arm-static | awk "{print \$1}")" && \
     rm hook_execve.c check_arch_arm.c
 ENV LD_PRELOAD /usr/lib/hook_execve.so
 
-# xterm js
-WORKDIR /xterm
-COPY --from=xterm-builder /xterm-build/dist ./dist
-COPY --from=xterm-builder /xterm-build/server.mjs ./
-COPY --from=xterm-builder /xterm-build/package*.json ./
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&\
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        nodejs=22.12.0-1nodesource1 && \
-    npm install --production && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# xterm rs
+RUN mkdir /xterm
+COPY xterm-rs/static /xterm/static
+RUN curl -L https://static.jyh.sb/script/iterm-theme/themes.min.mjs -o /xterm/static/js/themes.min.mjs
+COPY --from=xterm-rs-builder /xterm-rs/target/release/xterm-rs /xterm/xterm-rs
+COPY --from=xterm-builder /xtermjs/node_modules/@xterm/xterm/css/xterm.css /xterm/static/css/xterm.css
+COPY --from=xterm-builder /xtermjs/node_modules/@xterm/xterm/lib/xterm.mjs /xterm/static/js/xterm.mjs
+COPY --from=xterm-builder /xtermjs/node_modules/@xterm/addon-fit/lib/addon-fit.mjs /xterm/static/js/addon-fit.mjs
+COPY --from=xterm-builder /xtermjs/node_modules/@xterm/addon-clipboard/lib/addon-clipboard.mjs /xterm/static/js/addon-clipboard.mjs
 
 EXPOSE 8080
 
-# verbose-log
-COPY --from=workspace-logger-builder /workspace-logger/target/release/workspace-logger /usr/bin/workspace-logger
-
 # gosu helper
-COPY --chmod=0755 --chown=root:root container-entry shell-entry workspace-logger /usr/bin/
+COPY --chmod=0755 --chown=root:root container-entry /usr/bin/
 USER root
 RUN mkdir -p /run /var/run && \
     touch /run/fixuid.ran /var/run/fixuid.ran
 
 ENV PATH "/usr/armbin:$PATH"
-ENV IMAGE_VERSION="v0.4.0"
+ENV IMAGE_VERSION="v1.0.0"
 USER student
 ENTRYPOINT ["/usr/bin/container-entry"]
-# CMD ["/bin/bash"]
